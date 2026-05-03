@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-/// Une entrée du carrousel PRIM (MonitoringRef / LineRef au format STIF).
+/// One PRIM carousel entry. MonitoringRef and LineRef use the STIF/SIRI format.
 struct IdfmCarouselSlot {
   const char* monitoring_ref;
   const char* line_ref;

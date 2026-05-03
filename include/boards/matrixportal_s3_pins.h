@@ -1,12 +1,12 @@
 #pragma once
 
 #if !defined(BOARD_MATRIXPORTAL_S3)
-#error "Ce fichier cible uniquement BOARD_MATRIXPORTAL_S3"
+#error "This file only targets BOARD_MATRIXPORTAL_S3"
 #endif
 
-// Brochage du connecteur HUB75 **intégré au dos** du Matrix Portal S3
-// (Adafruit « CircuitPython / Internet Display », même carte — produit 5778).
-// Aligné sur Adafruit Protomatter (pas de câblage externe à l’ESP32).
+// HUB75 connector pinout built into the back of the Adafruit Matrix Portal S3
+// (CircuitPython / Internet Display, product 5778).
+// Matches the Adafruit Protomatter mapping; no external ESP32 wiring is needed.
 // https://learn.adafruit.com/adafruit-matrixportal-s3
 // https://github.com/adafruit/Adafruit_Protomatter
 

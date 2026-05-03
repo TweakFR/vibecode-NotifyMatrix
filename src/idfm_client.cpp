@@ -45,7 +45,7 @@ void copy_cstr(char* dst, size_t dst_size, const char* src)
 
 bool is_configured(const char* value)
 {
-  return value != nullptr && value[0] != '\0' && std::strcmp(value, "VOTRE_CLE_PRIM") != 0;
+  return value != nullptr && value[0] != '\0' && std::strcmp(value, "YOUR_PRIM_KEY") != 0;
 }
 
 int64_t days_from_civil(int y, unsigned m, unsigned d)
@@ -157,7 +157,7 @@ const char* first_time_value(JsonObject call)
   return nullptr;
 }
 
-/// LineRef PRIM : soit chaîne directe, soit objet { "value": "STIF:..." }.
+/// PRIM LineRef can be either a direct string or an object like {"value": "STIF:..."}.
 const char* journey_line_ref_cstr(JsonObject journey)
 {
   JsonVariant lr = journey["LineRef"];
@@ -191,8 +191,8 @@ bool label_is_all_ascii_digits(const char* s)
   return true;
 }
 
-/// Libellé .env (ex. "0628", "2225") vs LineRef STIF (ex. STIF:Line::C00628:).
-/// Les codes réseau sont souvent "C" + 5 chiffres ; "0628" -> cherche "C00628".
+/// Display label from `.env` (for example "0628" or "2225") vs STIF LineRef.
+/// Network codes are often "C" plus five digits, so "0628" also checks "C00628".
 bool line_label_matches_stif_line_ref(const char* lr, const char* label)
 {
   if (lr == nullptr || lr[0] == '\0' || label == nullptr || label[0] == '\0') {
@@ -234,13 +234,13 @@ bool journey_matches_line_filter(JsonObject journey,
     }
   }
 
-  // route_id type IDFM:C00628 -> souvent STIF:Line::C00628: dans LineRef SIRI
+  // route_id values like IDFM:C00628 usually appear as STIF:Line::C00628: in SIRI LineRef.
   if (has_code && has_label) {
     if (lr[0] == '\0' || std::strstr(lr, line_code_substr) == nullptr) {
       return false;
     }
-    // LineRef (ex. STIF:Line::C00628:) identifie la ligne ; PublishedLineName est souvent
-    // absent ou sans le numéro commercial — ne pas l'exiger quand le code STIF matche.
+    // LineRef identifies the line. PublishedLineName is often missing or does not contain
+    // the commercial number, so do not require it when the STIF code already matches.
     return true;
   }
 
@@ -262,7 +262,7 @@ bool journey_matches_line_filter(JsonObject journey,
   return !has_ref;
 }
 
-/// Un élément MonitoredStopVisit (SIRI : tableau ou objet unique).
+/// One MonitoredStopVisit item. SIRI can return either an array or a single object.
 void idfm_consider_one_visit(JsonObject visit,
                              const char* line_ref,
                              const char* line_code_substr,
@@ -325,7 +325,7 @@ void set_error(IdfmResult& result, const char* text, int http_code = 0)
   copy_cstr(result.error, sizeof(result.error), text);
 }
 
-/// Corps HTTP / JSON long : tronque pour le port série (max_print plafonné en interne).
+/// Truncate long HTTP/JSON bodies for serial output.
 void idfm_serial_trunc(const char* prefix, const char* body, size_t max_print = 220)
 {
   constexpr size_t kBufCap = 512;
@@ -344,28 +344,28 @@ void idfm_serial_trunc(const char* prefix, const char* body, size_t max_print = 
   char buf[kBufCap];
   std::memcpy(buf, body, max_print);
   buf[max_print] = '\0';
-  Serial.printf("%s%s… (total %u octets)\n", prefix, buf, (unsigned)n);
+  Serial.printf("%s%s... (total %u bytes)\n", prefix, buf, (unsigned)n);
 }
 
-/// Indique qu’une clé est présente sans l’afficher en clair (longueur + 2 premiers / 2 derniers caractères).
+/// Log that an API key exists without printing it in full.
 void idfm_log_api_key_meta(const char* api_key)
 {
   if (api_key == nullptr || api_key[0] == '\0') {
-    Serial.println("[IDFM] entete apikey: (vide)");
+    Serial.println("[IDFM] apikey header: (empty)");
     return;
   }
   const size_t n = std::strlen(api_key);
   if (n <= 4u) {
-    Serial.printf("[IDFM] entete apikey: len=%u (cle tres courte — verifier .env)\n", (unsigned)n);
+    Serial.printf("[IDFM] apikey header: len=%u (very short key - check .env)\n", (unsigned)n);
     return;
   }
-  Serial.printf("[IDFM] entete apikey: len=%u debut=%.2s...fin=%.2s\n",
+  Serial.printf("[IDFM] apikey header: len=%u start=%.2s...end=%.2s\n",
                 (unsigned)n,
                 api_key,
                 api_key + (n - 2));
 }
 
-/// Imprime une chaîne longue (ex. URL) par morceaux pour éviter les soucis de buffer Serial.printf.
+/// Print a long string, such as a URL, in chunks to avoid Serial.printf buffer issues.
 void idfm_serial_print_cstr_chunks(const char* label, const char* s)
 {
   Serial.print(label);
@@ -385,8 +385,8 @@ void idfm_serial_print_cstr_chunks(const char* label, const char* s)
   Serial.println();
 }
 
-/// PRIM renvoie parfois `StopMonitoringDelivery` comme tableau `[{ ... }]`,
-/// parfois comme un seul objet `{ ... }`. Le filtre Json `[0]` exclut alors tout le contenu.
+/// PRIM sometimes returns StopMonitoringDelivery as an array, sometimes as one object.
+/// A JSON filter hard-coded to [0] would then hide the whole payload.
 JsonObject idfm_get_stop_monitoring_delivery(JsonVariant smd)
 {
   if (smd.isNull()) {
@@ -418,7 +418,7 @@ bool idfm_fetch_next_departure(const char* api_key,
   result = IdfmResult{};
   copy_cstr(result.line, sizeof(result.line), fallback_line_label);
 
-  Serial.printf("[IDFM] --- requete ms=%lu heap=%u epoch=%lld\n",
+  Serial.printf("[IDFM] --- request ms=%lu heap=%u epoch=%lld\n",
                 (unsigned long)t_start_ms,
                 (unsigned)ESP.getFreeHeap(),
                 (long long)time(nullptr));
@@ -441,8 +441,8 @@ bool idfm_fetch_next_departure(const char* api_key,
 
   Serial.printf("[IDFM] ref=%.48s line_ref=%.32s code=%.24s label=%.16s\n",
                 monitoring_ref != nullptr ? monitoring_ref : "(null)",
-                line_ref != nullptr && line_ref[0] != '\0' ? line_ref : "(vide)",
-                line_code_substr != nullptr && line_code_substr[0] != '\0' ? line_code_substr : "(vide)",
+                line_ref != nullptr && line_ref[0] != '\0' ? line_ref : "(empty)",
+                line_code_substr != nullptr && line_code_substr[0] != '\0' ? line_code_substr : "(empty)",
                 fallback_line_label != nullptr ? fallback_line_label : "(null)");
 
   String url = "https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring?MonitoringRef=";
@@ -453,19 +453,19 @@ bool idfm_fetch_next_departure(const char* api_key,
   }
 
   Serial.println();
-  Serial.println(F("[IDFM] ========== APPEL API PRIM =========="));
+  Serial.println(F("[IDFM] ========== PRIM API CALL =========="));
   Serial.println(F("[IDFM] service: GET https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring"));
-  Serial.println(F("[IDFM] format: JSON (SIRI Lite), entete Accept: application/json"));
-  Serial.println(F("[IDFM] TLS: WiFiClientSecure + setInsecure() (pas de pinning certificat)"));
-  Serial.printf("[IDFM] HTTPClient timeout=%u ms | heap avant requete=%u\n",
+  Serial.println(F("[IDFM] format: JSON (SIRI Lite), Accept header: application/json"));
+  Serial.println(F("[IDFM] TLS: WiFiClientSecure + setInsecure() (no certificate pinning)"));
+  Serial.printf("[IDFM] HTTPClient timeout=%u ms | heap before request=%u\n",
                 15000u,
                 (unsigned)ESP.getFreeHeap());
   Serial.printf("[IDFM] WiFi: status=%d (3=WL_CONNECTED) RSSI=%d dBm\n",
                 (int)WiFi.status(),
                 (int)WiFi.RSSI());
   idfm_log_api_key_meta(api_key);
-  idfm_serial_print_cstr_chunks("[IDFM] URL (MonitoringRef + LineRef encodes): ", url.c_str());
-  Serial.printf("[IDFM] URL longueur=%u caracteres\n", (unsigned)url.length());
+  idfm_serial_print_cstr_chunks("[IDFM] URL (encoded MonitoringRef + LineRef): ", url.c_str());
+  Serial.printf("[IDFM] URL length=%u chars\n", (unsigned)url.length());
 
   WiFiClientSecure secure_client;
   secure_client.setInsecure();
@@ -476,18 +476,18 @@ bool idfm_fetch_next_departure(const char* api_key,
     Serial.printf("[IDFM] FAIL http_begin(url) WiFi_status=%d heap=%u\n",
                   (int)WiFi.status(),
                   (unsigned)ESP.getFreeHeap());
-    Serial.println(F("[IDFM] ========== FIN APPEL (http_begin KO) =========="));
+    Serial.println(F("[IDFM] ========== END CALL (http_begin failed) =========="));
     set_error(result, "http begin");
     return false;
   }
 
   http.addHeader("accept", "application/json");
   http.addHeader("apikey", api_key);
-  Serial.println(F("[IDFM] envoi GET..."));
+  Serial.println(F("[IDFM] sending GET..."));
 
   const int http_code = http.GET();
   result.http_code = http_code;
-  Serial.printf("[IDFM] reponse ligne: HTTP %d (200=OK) dt=%lu ms heap=%u\n",
+  Serial.printf("[IDFM] line response: HTTP %d (200=OK) dt=%lu ms heap=%u\n",
                 http_code,
                 (unsigned long)(millis() - t_start_ms),
                 (unsigned)ESP.getFreeHeap());
@@ -497,19 +497,18 @@ bool idfm_fetch_next_departure(const char* api_key,
                   http_code,
                   (unsigned)ESP.getFreeHeap(),
                   (unsigned long)(millis() - t_start_ms));
-    idfm_serial_trunc("[IDFM] corps erreur HTTP (debut): ", err_body.c_str(), 400);
+    idfm_serial_trunc("[IDFM] HTTP error body (start): ", err_body.c_str(), 400);
     http.end();
-    Serial.println(F("[IDFM] ========== FIN APPEL (echec HTTP) =========="));
+    Serial.println(F("[IDFM] ========== END CALL (HTTP failure) =========="));
     set_error(result, "http error", http_code);
     return false;
   }
 
-  // Lire tout le JSON en RAM : le parse depuis getStream() + TLS est souvent incomplet sur
-  // ESP32 (désérialisation en échec → "ERR" à l’écran). Réponses stop-monitoring restent
-  // petites si IDFM_LINE_REF est renseigné dans .env.
+  // Read the whole JSON body into RAM. Parsing directly from getStream() over TLS can be
+  // incomplete on ESP32. Stop-monitoring responses stay small when IDFM_LINE_REF is set.
   const String response_body = http.getString();
   http.end();
-  Serial.printf("[IDFM] corps lu: %u octets | heap=%u | dt=%lu ms\n",
+  Serial.printf("[IDFM] body read: %u bytes | heap=%u | dt=%lu ms\n",
                 (unsigned)response_body.length(),
                 (unsigned)ESP.getFreeHeap(),
                 (unsigned long)(millis() - t_start_ms));
@@ -517,21 +516,20 @@ bool idfm_fetch_next_departure(const char* api_key,
     Serial.printf("[IDFM] FAIL empty_response_body heap=%u dt=%lums\n",
                   (unsigned)ESP.getFreeHeap(),
                   (unsigned long)(millis() - t_start_ms));
-    Serial.println(F("[IDFM] ========== FIN APPEL (corps vide) =========="));
+    Serial.println(F("[IDFM] ========== END CALL (empty body) =========="));
     set_error(result, "empty body", http_code);
     return false;
   }
 
-  idfm_serial_trunc("[IDFM] corps JSON (debut): ", response_body.c_str(), 400);
+  idfm_serial_trunc("[IDFM] JSON body (start): ", response_body.c_str(), 400);
 
   JsonDocument filter;
-  // Garder tout le bloc delivery : si `StopMonitoringDelivery` est un objet (pas un tableau),
-  // un filtre sur `[0]` supprime MonitoredStopVisit et le parseur voit un champ null.
+  // Keep the whole delivery block. If StopMonitoringDelivery is an object, a [0] filter
+  // would remove MonitoredStopVisit and make the parser see null.
   filter["Siri"]["ServiceDelivery"]["StopMonitoringDelivery"] = true;
 
   JsonDocument doc;
-  // JSON PRIM/SIRI : objets imbriques (LineRef.value, tableaux, MonitoredCall…) dépassent
-  // la limite ArduinoJson par défaut (10) → erreur TooDeep sans limite plus haute.
+  // PRIM/SIRI JSON can exceed ArduinoJson's default nesting limit.
   constexpr uint8_t kJsonNestingLimit = 30;
   DeserializationError error = deserializeJson(
       doc,
@@ -545,8 +543,8 @@ bool idfm_fetch_next_departure(const char* api_key,
                   (unsigned)kJsonNestingLimit,
                   (unsigned)ESP.getFreeHeap(),
                   (unsigned long)(millis() - t_start_ms));
-    idfm_serial_trunc("[IDFM] corps rejoue pour debug parse: ", response_body.c_str(), 400);
-    Serial.println(F("[IDFM] ========== FIN APPEL (parse JSON KO) =========="));
+    idfm_serial_trunc("[IDFM] body replay for parse debug: ", response_body.c_str(), 400);
+    Serial.println(F("[IDFM] ========== END CALL (JSON parse failed) =========="));
     set_error(result, "json error", http_code);
     return false;
   }
@@ -554,10 +552,10 @@ bool idfm_fetch_next_departure(const char* api_key,
   JsonObject delivery = idfm_get_stop_monitoring_delivery(
       doc["Siri"]["ServiceDelivery"]["StopMonitoringDelivery"]);
   if (delivery.isNull()) {
-    Serial.printf("[IDFM] FAIL stop_monitoring_delivery absent/vide heap=%u dt=%lums\n",
+    Serial.printf("[IDFM] FAIL stop_monitoring_delivery missing/empty heap=%u dt=%lums\n",
                   (unsigned)ESP.getFreeHeap(),
                   (unsigned long)(millis() - t_start_ms));
-    Serial.println(F("[IDFM] ========== FIN APPEL (pas de delivery JSON) =========="));
+    Serial.println(F("[IDFM] ========== END CALL (no JSON delivery) =========="));
     set_error(result, "no delivery", http_code);
     copy_cstr(result.text, sizeof(result.text), "--");
     return false;
@@ -574,7 +572,7 @@ bool idfm_fetch_next_departure(const char* api_key,
     Serial.printf("[IDFM] FAIL api_error_condition: %s (heap=%u)\n",
                   msg,
                   (unsigned)ESP.getFreeHeap());
-    Serial.println(F("[IDFM] ========== FIN APPEL (PRIM ErrorCondition) =========="));
+    Serial.println(F("[IDFM] ========== END CALL (PRIM ErrorCondition) =========="));
     result.ok = false;
     result.http_code = http_code;
     copy_cstr(result.error, sizeof(result.error), msg);
@@ -584,16 +582,16 @@ bool idfm_fetch_next_departure(const char* api_key,
 
   JsonVariant msv = delivery["MonitoredStopVisit"];
   if (msv.isNull()) {
-    Serial.printf("[IDFM] FAIL monitored_stop_visit absent/null heap=%u dt=%lums\n",
+    Serial.printf("[IDFM] FAIL monitored_stop_visit missing/null heap=%u dt=%lums\n",
                   (unsigned)ESP.getFreeHeap(),
                   (unsigned long)(millis() - t_start_ms));
-    Serial.println(F("[IDFM] ========== FIN APPEL (pas de passages dans JSON) =========="));
+    Serial.println(F("[IDFM] ========== END CALL (no visits in JSON) =========="));
     set_error(result, "no visits", http_code);
     copy_cstr(result.text, sizeof(result.text), "--");
     return false;
   }
 
-  Serial.println(F("[IDFM] JSON structure OK, analyse MonitoredStopVisit / lignes…"));
+  Serial.println(F("[IDFM] JSON structure OK, analyzing MonitoredStopVisit / lines..."));
 
   const time_t now = time(nullptr);
   int best_minutes = 9999;
@@ -608,8 +606,8 @@ bool idfm_fetch_next_departure(const char* api_key,
     JsonArray visits = msv.as<JsonArray>();
     visit_count = visits.size();
     if (visit_count == 0) {
-      Serial.printf("[IDFM] FAIL visits_empty (tableau 0) heap=%u\n", (unsigned)ESP.getFreeHeap());
-      Serial.println(F("[IDFM] ========== FIN APPEL (liste passages vide) =========="));
+      Serial.printf("[IDFM] FAIL visits_empty (array size 0) heap=%u\n", (unsigned)ESP.getFreeHeap());
+      Serial.println(F("[IDFM] ========== END CALL (empty visits list) =========="));
       set_error(result, "no visits", http_code);
       copy_cstr(result.text, sizeof(result.text), "--");
       return false;
@@ -641,9 +639,9 @@ bool idfm_fetch_next_departure(const char* api_key,
                             skipped_past,
                             kept_line);
   } else {
-    Serial.printf("[IDFM] FAIL monitored_stop_visit type inattendu heap=%u\n",
+    Serial.printf("[IDFM] FAIL monitored_stop_visit unexpected type heap=%u\n",
                   (unsigned)ESP.getFreeHeap());
-    Serial.println(F("[IDFM] ========== FIN APPEL (type MonitoredStopVisit inconnu) =========="));
+    Serial.println(F("[IDFM] ========== END CALL (unknown MonitoredStopVisit type) =========="));
     set_error(result, "no visits", http_code);
     copy_cstr(result.text, sizeof(result.text), "--");
     return false;
@@ -661,7 +659,7 @@ bool idfm_fetch_next_departure(const char* api_key,
         (long long)now,
         (unsigned)ESP.getFreeHeap(),
         (unsigned long)(millis() - t_start_ms));
-    Serial.println(F("[IDFM] ========== FIN APPEL (aucun passage retenu apres filtres) =========="));
+    Serial.println(F("[IDFM] ========== END CALL (no matching visit after filters) =========="));
     set_error(result, "no match", http_code);
     copy_cstr(result.text, sizeof(result.text), "--");
     return false;
@@ -678,7 +676,7 @@ bool idfm_fetch_next_departure(const char* api_key,
                 (unsigned)visit_count,
                 (unsigned)ESP.getFreeHeap(),
                 (unsigned long)(millis() - t_start_ms));
-  Serial.printf("[IDFM] UI: texte affiche bus=\"%s\" ok=%d\n", result.text, (int)result.ok);
-  Serial.println(F("[IDFM] ========== FIN APPEL (succes) =========="));
+  Serial.printf("[IDFM] UI: bus text=\"%s\" ok=%d\n", result.text, (int)result.ok);
+  Serial.println(F("[IDFM] ========== END CALL (success) =========="));
   return true;
 }

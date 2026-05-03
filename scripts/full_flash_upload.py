@@ -1,6 +1,6 @@
-# Chaque `pio run -t upload` : insère `write_flash --erase-all` pour effacer toute la
-# flash puis réécrire bootloader, tables de partitions, TinyUF2 et firmware d’un coup.
-# (Uniquement la cible `upload`, pas `uploadfs` : erase-all + une seule image FS casserait la carte.)
+# For `pio run -t upload`, insert `write_flash --erase-all` so the upload clears
+# flash and rewrites the bootloader, partition tables, TinyUF2, and firmware.
+# Only hook the `upload` target: erase-all plus a single FS image would break the board.
 
 Import("env")
 
@@ -17,7 +17,7 @@ def inject_erase_all(target, source, env):
     i = flags.index("write_flash")
     flags.insert(i + 1, "--erase-all")
     env.Replace(UPLOADERFLAGS=flags)
-    print("NotifyMatrix: flash complète (write_flash --erase-all + toutes les images).")
+    print("NotifyMatrix: full flash erase enabled (write_flash --erase-all + all images).")
 
 
 env.AddPreAction("upload", inject_erase_all)

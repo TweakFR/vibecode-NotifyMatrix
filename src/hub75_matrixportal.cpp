@@ -71,9 +71,9 @@ bool Hub75MatrixPortal::begin(uint8_t initial_brightness8)
   panel_ = m;
   m->setBrightness8(initial_brightness8);
   m->clearScreen();
-  delay(100); // USB série CDC : laisser le moniteur temps de s’ouvrir
+  delay(100); // Give the USB CDC monitor a short window to attach.
 
-  Serial.print(F("HUB75 OK — "));
+  Serial.print(F("HUB75 OK - "));
   Serial.print((int)PANEL_MODULE_WIDTH * PANEL_CHAIN_LENGTH);
   Serial.print('x');
   Serial.print((int)PANEL_MODULE_HEIGHT);

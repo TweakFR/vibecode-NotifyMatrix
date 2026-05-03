@@ -7,7 +7,6 @@
 #include <cstring>
 #include <math.h>
 
-#include "secrets.h"
 #include "app_config.h"
 #include "hub75_matrixportal.h"
 #include "idfm_carousel.h"
@@ -114,7 +113,7 @@ void update_notify_visuals(uint32_t now_ms)
   }
 }
 
-/// Tant qu’une notif MQTT anime, ne pas lancer d’appel PRIM bloquant (sinon la boucle ne redessine pas).
+/// Do not start a blocking PRIM request while an MQTT notification is animating.
 bool idfm_defer_http_for_notify()
 {
   return g_ui.notification_active &&
@@ -152,7 +151,7 @@ bool time_is_valid()
   return time(nullptr) > 1700000000;
 }
 
-/// Met à jour l’heure affichée ; retourne true si le texte a changé (pour éviter les redraw inutiles).
+/// Update the clock text and return true only when the displayed text changed.
 bool update_time_text()
 {
   const bool synced = time_is_valid();
@@ -176,14 +175,6 @@ bool update_time_text()
     return true;
   }
   return false;
-}
-
-void set_bus_loading()
-{
-  g_ui.bus_state = BusState::Loading;
-  g_ui.bus_eta_minutes = -1;
-  copy_text(g_ui.bus_line, sizeof(g_ui.bus_line), IDFM_LINE_LABEL);
-  copy_text(g_ui.bus_text, sizeof(g_ui.bus_text), "...");
 }
 
 void set_bus_from_result(const IdfmResult& result)
@@ -343,7 +334,7 @@ static void poll_idfm_flow(uint32_t now_ms)
                                                 line_label,
                                                 g_prefetch);
       (void)ok;
-      Serial.printf("[IDFM] prefetch next=%u (affiche encore slot=%u) ok=%d http=%d\n",
+      Serial.printf("[IDFM] prefetch next=%u (still showing slot=%u) ok=%d http=%d\n",
                     (unsigned)nxt,
                     (unsigned)g_show_idx,
                     ok ? 1 : 0,
@@ -360,7 +351,7 @@ static void poll_idfm_flow(uint32_t now_ms)
     {
       g_show_idx = prefetch_slot_index();
       set_ui_from_result_for_slot(g_show_idx, g_prefetch);
-      Serial.printf("[IDFM] affiche slot=%u apres %ums\n",
+      Serial.printf("[IDFM] show slot=%u after %ums\n",
                     (unsigned)g_show_idx,
                     (unsigned)IDFM_HOLD_AFTER_PREFETCH_MS);
       s_ui_dirty = true;
@@ -389,7 +380,7 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
 
 void connect_wifi_blocking()
 {
-  Serial.printf("WiFi connexion a %s\n", WIFI_SSID);
+  Serial.printf("WiFi connecting to %s\n", WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
@@ -415,7 +406,7 @@ void ensure_wifi(uint32_t now_ms)
     return;
   }
   g_last_wifi_attempt_ms = now_ms;
-  Serial.println(F("WiFi reconnexion..."));
+  Serial.println(F("WiFi reconnecting..."));
   WiFi.disconnect(false);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }
@@ -436,7 +427,7 @@ void ensure_mqtt(uint32_t now_ms)
   }
   g_last_mqtt_attempt_ms = now_ms;
 
-  Serial.printf("MQTT connexion %s:%d...\n", MQTT_HOST, MQTT_PORT);
+  Serial.printf("MQTT connecting %s:%d...\n", MQTT_HOST, MQTT_PORT);
   bool connected = false;
   if (has_text(MQTT_USER)) {
     connected = g_mqtt.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASSWORD);
@@ -461,7 +452,7 @@ void setup_time()
     if (getLocalTime(&timeinfo, 500)) {
       char buf[40];
       strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S %Z", &timeinfo);
-      Serial.printf("Heure Paris (TZ): %s\n", buf);
+      Serial.printf("Paris time (TZ): %s\n", buf);
       break;
     }
     delay(100);
@@ -470,7 +461,7 @@ void setup_time()
 
 void setup()
 {
-  esp_rom_printf("\r\n[NotifyMatrix] setup() DEBUT\r\n");
+  esp_rom_printf("\r\n[NotifyMatrix] setup() START\r\n");
 
   Serial.begin(115200);
   delay(800);
@@ -485,8 +476,8 @@ void setup()
 
   Serial.println();
   Serial.printf("esp_reset_reason()=%d\n", (int)esp_reset_reason());
-  Serial.println(F("NotifyMatrix — app"));
-  Serial.printf("Geometrie: module=%dx%d chain=%d total=%dx%d\n",
+  Serial.println(F("NotifyMatrix - app"));
+  Serial.printf("Geometry: module=%dx%d chain=%d total=%dx%d\n",
                 PANEL_MODULE_WIDTH,
                 PANEL_MODULE_HEIGHT,
                 PANEL_CHAIN_LENGTH,
@@ -498,7 +489,7 @@ void setup()
   g_ui.bus_eta_minutes = -1;
 
   if (!g_hub.begin(128)) {
-    Serial.println(F("ERREUR: Hub75MatrixPortal::begin() a echoue"));
+    Serial.println(F("ERROR: Hub75MatrixPortal::begin() failed"));
   } else {
     g_hub.run_boot_rgb_horizontal_thirds(HUB75_SELFTEST_STEP_MS);
     g_hub.draw_ui(g_ui);
