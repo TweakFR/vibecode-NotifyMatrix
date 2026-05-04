@@ -1,7 +1,7 @@
 #include "idfm_carousel.h"
 
 // The build script injects these macros from `.env`. Single-line mode keeps IDFM_SLOT_COUNT at 0.
-#if IDFM_SLOT_COUNT > 0
+#if IDFM_SLOT_COUNT > 7
 const IdfmCarouselSlot kIdfmCarouselSlots[] = {
 #if IDFM_SLOT_COUNT > 0
     {IDFM_SLOT_0_MONITORING_REF, IDFM_SLOT_0_LINE_REF, IDFM_SLOT_0_LINE_CODE, IDFM_SLOT_0_LABEL},

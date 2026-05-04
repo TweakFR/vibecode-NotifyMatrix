@@ -8,6 +8,25 @@
 #include <cstdlib>
 #include <ctime>
 #include <cstring>
+#include <cctype>
+
+bool contains_case_insensitive(const char* haystack, const char* needle) {
+  if (!haystack || !needle) return false;
+  size_t h_len = strlen(haystack);
+  size_t n_len = strlen(needle);
+  if (n_len > h_len) return false;
+  for (size_t i = 0; i <= h_len - n_len; ++i) {
+    bool match = true;
+    for (size_t j = 0; j < n_len; ++j) {
+      if (tolower((unsigned char)haystack[i + j]) != tolower((unsigned char)needle[j])) {
+        match = false;
+        break;
+      }
+    }
+    if (match) return true;
+  }
+  return false;
+}
 
 static String idfm_uri_encode_component(const char* s)
 {
@@ -187,9 +206,7 @@ const char* first_time_value(JsonObject call)
   static const char* const kKeys[] = {"ActualDepartureTime",
                                        "ActualArrivalTime",
                                        "ExpectedDepartureTime",
-                                       "ExpectedArrivalTime",
-                                       "AimedDepartureTime",
-                                       "AimedArrivalTime"};
+                                       "ExpectedArrivalTime",};
   for (const char* k : kKeys) {
     const char* s = siri_datetime_string(call[k]);
     if (s != nullptr && s[0] != '\0') {
@@ -356,6 +373,27 @@ void idfm_consider_one_visit(JsonObject visit,
       return;
     }
     */
+  }
+  
+  // Filter by destination for line P (C01730) - only Gare de l'Est, Paris-Est, GdE, Paris Est
+  if (std::strcmp(line_code_substr, "C01730") == 0) {
+    const char* destination = first_string(journey["DestinationName"]);
+    if (destination == nullptr || destination[0] == '\0') {
+      JsonVariant dest_ref = journey["DestinationRef"];
+      if (dest_ref.is<const char*>()) {
+        destination = dest_ref.as<const char*>();
+      }
+    }
+    Serial.printf("[IDFM] P dest=%.32s\n", destination != nullptr ? destination : "(null)");
+    if (destination == nullptr || destination[0] == '\0' ||
+        (!contains_case_insensitive(destination, "Gare de l'Est") &&
+         !contains_case_insensitive(destination, "Paris-Est") &&
+         !contains_case_insensitive(destination, "GdE") &&
+         !contains_case_insensitive(destination, "Paris Est"))) {
+      skipped_line++;
+      Serial.println("[IDFM] P skipped dest filter");
+      return;
+    }
   }
   
   kept_line++;
@@ -542,7 +580,7 @@ bool idfm_fetch_next_departure(const char* api_key,
   Serial.println(F("[IDFM] format: JSON (SIRI Lite), Accept header: application/json"));
   Serial.println(F("[IDFM] TLS: WiFiClientSecure + setInsecure() (no certificate pinning)"));
   Serial.printf("[IDFM] HTTPClient timeout=%u ms | heap before request=%u\n",
-                15000u,
+                3000u,
                 (unsigned)ESP.getFreeHeap());
   Serial.printf("[IDFM] WiFi: status=%d (3=WL_CONNECTED) RSSI=%d dBm\n",
                 (int)WiFi.status(),

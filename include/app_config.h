@@ -68,7 +68,7 @@
 #define MQTT_CLIENT_ID "notifymatrix-s3"
 #endif
 
-// Display refresh period during animations. 16 ms is about 60 FPS.
+// Display refresh period during animations. 16 ms is about 60 FPS and is the practical max for this panel.
 #ifndef UI_REFRESH_MS
 #define UI_REFRESH_MS 16
 #endif
@@ -86,7 +86,7 @@
 // After fetching the next carousel slot, keep showing the current slot for this long.
 // The next line is never displayed before its API response is available.
 #ifndef IDFM_HOLD_AFTER_PREFETCH_MS
-#define IDFM_HOLD_AFTER_PREFETCH_MS 3000u
+#define IDFM_HOLD_AFTER_PREFETCH_MS 5000u
 #endif
 
 // On first boot, keep the clock and current line visible before the first blocking IDFM call.
@@ -116,7 +116,7 @@
 
 // Maximum displayed/received text sizes.
 #ifndef NOTIFICATION_TEXT_MAX
-#define NOTIFICATION_TEXT_MAX 64
+#define NOTIFICATION_TEXT_MAX 128
 #endif
 #ifndef BUS_LABEL_MAX
 #define BUS_LABEL_MAX 12

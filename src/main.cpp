@@ -184,7 +184,6 @@ void set_bus_from_result(const IdfmResult& result)
   } else {
     copy_text(g_ui.bus_line, sizeof(g_ui.bus_line), IDFM_LINE_LABEL);
   }
-  copy_text(g_ui.bus_text, sizeof(g_ui.bus_text), result.text);
   for (size_t i = 0; i < sizeof(g_ui.bus_text) && g_ui.bus_text[i] != '\0'; i++) {
     if (g_ui.bus_text[i] == '\n' || g_ui.bus_text[i] == '\r') {
       g_ui.bus_text[i] = ' ';
@@ -372,7 +371,7 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   g_notify_phase = NotifyPhase::Shrink;
   g_notify_phase_start_ms = millis();
   g_ui.notify_shrink_px = 0;
-  g_ui.notify_scroll_x = 0;
+  g_ui.notify_scroll_x = (int16_t)(DISPLAY_TOTAL_WIDTH + 8);
   g_ui.notify_scroll_visible = false;
   s_ui_dirty = true;
   Serial.printf("MQTT notification: %s\n", g_ui.notification);
