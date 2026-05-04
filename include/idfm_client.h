@@ -7,11 +7,7 @@ struct IdfmResult {
   int minutes = -1;
   int http_code = 0;
   char line[BUS_LABEL_MAX] = IDFM_LINE_LABEL;
-<<<<<<< HEAD
-  char text[BUS_STATUS_MAX] = "--";
-=======
   char text[BUS_STATUS_MAX] = "+1h";
->>>>>>> 28e0244 (Updated)
   char error[32] = "";
 };
 

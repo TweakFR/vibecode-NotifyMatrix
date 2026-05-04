@@ -23,11 +23,7 @@ struct UiModel {
   bool notify_scroll_visible = false;
 
   char bus_line[BUS_LABEL_MAX] = DEFAULT_BUS_LINE_LABEL;
-<<<<<<< HEAD
-  char bus_text[BUS_STATUS_MAX] = "--";
-=======
   char bus_text[BUS_STATUS_MAX] = "+1h";
->>>>>>> 28e0244 (Updated)
   /// Minutes until departure. >=0 when Ready and valid, -1 otherwise.
   int16_t bus_eta_minutes = -1;
   BusState bus_state = BusState::Idle;

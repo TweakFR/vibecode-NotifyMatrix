@@ -241,11 +241,7 @@ static void apply_slot_line_idle_bus_ui(const IdfmSlotView& slot)
   } else {
     copy_text(g_ui.bus_line, sizeof(g_ui.bus_line), IDFM_LINE_LABEL);
   }
-<<<<<<< HEAD
-  copy_text(g_ui.bus_text, sizeof(g_ui.bus_text), "--");
-=======
   copy_text(g_ui.bus_text, sizeof(g_ui.bus_text), "+1h");
->>>>>>> 28e0244 (Updated)
   g_ui.bus_eta_minutes = -1;
   g_ui.bus_state = BusState::Ready;
 }
