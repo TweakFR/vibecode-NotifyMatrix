@@ -74,7 +74,15 @@ bool parse_int(const char* s, size_t pos, size_t len, int& out)
 
 bool parse_iso8601_epoch(const char* iso, time_t& out)
 {
+<<<<<<< HEAD
   if (iso == nullptr || std::strlen(iso) < 19) {
+=======
+  if (iso == nullptr) {
+    return false;
+  }
+  const size_t len = std::strlen(iso);
+  if (len < 16) {
+>>>>>>> 28e0244 (Updated)
     return false;
   }
 
@@ -84,6 +92,7 @@ bool parse_iso8601_epoch(const char* iso, time_t& out)
   int h = 0;
   int mi = 0;
   int sec = 0;
+<<<<<<< HEAD
   if (!parse_int(iso, 0, 4, y) || !parse_int(iso, 5, 2, mo) ||
       !parse_int(iso, 8, 2, d) || !parse_int(iso, 11, 2, h) ||
       !parse_int(iso, 14, 2, mi) || !parse_int(iso, 17, 2, sec)) {
@@ -102,6 +111,47 @@ bool parse_iso8601_epoch(const char* iso, time_t& out)
       return false;
     }
     offset_seconds = (oh * 3600 + om * 60) * (*tz == '+' ? 1 : -1);
+=======
+  if (!parse_int(iso, 0, 4, y) || iso[4] != '-' || !parse_int(iso, 5, 2, mo) ||
+      iso[7] != '-' || !parse_int(iso, 8, 2, d) || (iso[10] != 'T' && iso[10] != ' ') ||
+      !parse_int(iso, 11, 2, h) || iso[13] != ':' || !parse_int(iso, 14, 2, mi)) {
+    return false;
+  }
+
+  size_t pos = 16;
+  if (pos < len && iso[pos] == ':') {
+    if (pos + 2 >= len || !parse_int(iso, pos + 1, 2, sec)) {
+      return false;
+    }
+    pos += 3;
+    if (pos < len && iso[pos] == '.') {
+      pos++;
+      while (pos < len && iso[pos] >= '0' && iso[pos] <= '9') {
+        pos++;
+      }
+    }
+  }
+
+  int offset_seconds = 0;
+  if (pos < len) {
+    if (iso[pos] == 'Z') {
+      // UTC
+    } else if (iso[pos] == '+' || iso[pos] == '-') {
+      int oh = 0;
+      int om = 0;
+      if (pos + 2 >= len || !parse_int(iso, pos + 1, 2, oh)) {
+        return false;
+      }
+      size_t tz_pos = pos + 3;
+      if (tz_pos < len && iso[tz_pos] == ':') {
+        tz_pos++;
+      }
+      if (tz_pos + 1 >= len || !parse_int(iso, tz_pos, 2, om)) {
+        return false;
+      }
+      offset_seconds = (oh * 3600 + om * 60) * (iso[pos] == '+' ? 1 : -1);
+    }
+>>>>>>> 28e0244 (Updated)
   }
 
   const int64_t days = days_from_civil(y, (unsigned)mo, (unsigned)d);
@@ -136,12 +186,33 @@ const char* siri_datetime_string(JsonVariant v)
     if (o["value"].is<const char*>()) {
       return o["value"].as<const char*>();
     }
+<<<<<<< HEAD
+=======
+    if (o["DateTime"].is<const char*>()) {
+      return o["DateTime"].as<const char*>();
+    }
+    if (o["value"].is<JsonObject>()) {
+      return siri_datetime_string(o["value"]);
+    }
+    if (o["DateTime"].is<JsonObject>()) {
+      return siri_datetime_string(o["DateTime"]);
+    }
+  }
+  if (v.is<JsonArray>()) {
+    for (JsonVariant item : v.as<JsonArray>()) {
+      const char* s = siri_datetime_string(item);
+      if (s != nullptr && s[0] != '\0') {
+        return s;
+      }
+    }
+>>>>>>> 28e0244 (Updated)
   }
   return nullptr;
 }
 
 const char* first_time_value(JsonObject call)
 {
+<<<<<<< HEAD
   static const char* const kKeys[] = {"ExpectedDepartureTime",
                                        "ExpectedArrivalTime",
                                        "AimedDepartureTime",
@@ -152,6 +223,21 @@ const char* first_time_value(JsonObject call)
     const char* s = siri_datetime_string(call[k]);
     if (s != nullptr && s[0] != '\0') {
       return s;
+=======
+  static const char* const kKeys[] = {"ActualDepartureTime",
+                                       "ActualArrivalTime",
+                                       "ExpectedDepartureTime",
+                                       "ExpectedArrivalTime",
+                                       "AimedDepartureTime",
+                                       "AimedArrivalTime"};
+  for (const char* k : kKeys) {
+    const char* s = siri_datetime_string(call[k]);
+    if (s != nullptr && s[0] != '\0') {
+      time_t ignore = 0;
+      if (parse_iso8601_epoch(s, ignore)) {
+        return s;
+      }
+>>>>>>> 28e0244 (Updated)
     }
   }
   return nullptr;
@@ -281,8 +367,43 @@ void idfm_consider_one_visit(JsonObject visit,
   }
   if (!journey_matches_line_filter(journey, line_ref, line_code_substr, fallback_line_label)) {
     skipped_line++;
+<<<<<<< HEAD
     return;
   }
+=======
+    const char* lr = journey_line_ref_cstr(journey);
+    const char* pub = first_string(journey["PublishedLineName"]);
+    if (skipped_line <= 3u) {
+      Serial.printf("[IDFM] dbg skip_filter lr=%.32s pub=%.16s code=%.16s\n",
+                    lr != nullptr ? lr : "(null)",
+                    pub != nullptr ? pub : "(null)",
+                    line_code_substr != nullptr ? line_code_substr : "(null)");
+    }
+    return;
+  }
+  
+  // Filter by destination only for line 2224 (C01879)
+  if (std::strcmp(line_code_substr, "C01879") == 0) {
+    const char* destination = first_string(journey["DestinationName"]);
+    if (destination == nullptr || destination[0] == '\0') {
+      JsonVariant dest_ref = journey["DestinationRef"];
+      if (dest_ref.is<const char*>()) {
+        destination = dest_ref.as<const char*>();
+      }
+    }
+    Serial.printf("[IDFM] 2224 dest=%.32s\n", destination != nullptr ? destination : "(null)");
+    // Temporarily disable filter to debug
+    /*
+    if (destination == nullptr || destination[0] == '\0' || 
+        std::strstr(destination, "Val d'Europe") == nullptr) {
+      skipped_line++;
+      Serial.println("[IDFM] 2224 skipped dest filter");
+      return;
+    }
+    */
+  }
+  
+>>>>>>> 28e0244 (Updated)
   kept_line++;
 
   const char* label = first_string(journey["PublishedLineName"]);
@@ -293,10 +414,26 @@ void idfm_consider_one_visit(JsonObject visit,
   JsonObject call = journey["MonitoredCall"];
   const char* departure = first_time_value(call);
   time_t departure_epoch = 0;
+<<<<<<< HEAD
   if (!parse_iso8601_epoch(departure, departure_epoch)) {
     skipped_bad_iso++;
     if (skipped_bad_iso <= 2u) {
       Serial.printf("[IDFM] dbg skip_bad_iso dep=%.40s\n", departure != nullptr ? departure : "(null)");
+=======
+  if (departure == nullptr || departure[0] == '\0') {
+    skipped_bad_iso++;
+    if (skipped_bad_iso <= 5u) {
+      Serial.printf("[IDFM] dbg skip_no_time line=%.16s\n", label != nullptr ? label : "(null)");
+    }
+    return;
+  }
+  if (!parse_iso8601_epoch(departure, departure_epoch)) {
+    skipped_bad_iso++;
+    if (skipped_bad_iso <= 5u) {
+      Serial.printf("[IDFM] dbg skip_bad_iso line=%.16s dep=%.40s\n", 
+                    label != nullptr ? label : "(null)",
+                    departure);
+>>>>>>> 28e0244 (Updated)
     }
     return;
   }
@@ -313,6 +450,11 @@ void idfm_consider_one_visit(JsonObject visit,
   if (minutes < best_minutes) {
     best_minutes = minutes;
     best_label = label;
+<<<<<<< HEAD
+=======
+    Serial.printf("[IDFM] dbg found line=%.16s minutes=%d\n", 
+                  label != nullptr ? label : "(null)", minutes);
+>>>>>>> 28e0244 (Updated)
   }
 }
 
@@ -428,14 +570,20 @@ bool idfm_fetch_next_departure(const char* api_key,
                   is_configured(api_key) ? 1 : 0,
                   is_configured(monitoring_ref) ? 1 : 0);
     set_error(result, "missing config");
+<<<<<<< HEAD
     copy_cstr(result.text, sizeof(result.text), "--");
+=======
+>>>>>>> 28e0244 (Updated)
     return false;
   }
 
   if (time(nullptr) < 1700000000) {
     Serial.printf("[IDFM] FAIL time_not_synced epoch=%lld\n", (long long)time(nullptr));
     set_error(result, "time not synced");
+<<<<<<< HEAD
     copy_cstr(result.text, sizeof(result.text), "--");
+=======
+>>>>>>> 28e0244 (Updated)
     return false;
   }
 
@@ -557,7 +705,10 @@ bool idfm_fetch_next_departure(const char* api_key,
                   (unsigned long)(millis() - t_start_ms));
     Serial.println(F("[IDFM] ========== END CALL (no JSON delivery) =========="));
     set_error(result, "no delivery", http_code);
+<<<<<<< HEAD
     copy_cstr(result.text, sizeof(result.text), "--");
+=======
+>>>>>>> 28e0244 (Updated)
     return false;
   }
   if (delivery["ErrorCondition"].is<JsonObject>()) {
@@ -576,7 +727,10 @@ bool idfm_fetch_next_departure(const char* api_key,
     result.ok = false;
     result.http_code = http_code;
     copy_cstr(result.error, sizeof(result.error), msg);
+<<<<<<< HEAD
     copy_cstr(result.text, sizeof(result.text), "--");
+=======
+>>>>>>> 28e0244 (Updated)
     return false;
   }
 
@@ -587,7 +741,11 @@ bool idfm_fetch_next_departure(const char* api_key,
                   (unsigned long)(millis() - t_start_ms));
     Serial.println(F("[IDFM] ========== END CALL (no visits in JSON) =========="));
     set_error(result, "no visits", http_code);
+<<<<<<< HEAD
     copy_cstr(result.text, sizeof(result.text), "--");
+=======
+    copy_cstr(result.text, sizeof(result.text), "+1h");
+>>>>>>> 28e0244 (Updated)
     return false;
   }
 
@@ -609,7 +767,11 @@ bool idfm_fetch_next_departure(const char* api_key,
       Serial.printf("[IDFM] FAIL visits_empty (array size 0) heap=%u\n", (unsigned)ESP.getFreeHeap());
       Serial.println(F("[IDFM] ========== END CALL (empty visits list) =========="));
       set_error(result, "no visits", http_code);
+<<<<<<< HEAD
       copy_cstr(result.text, sizeof(result.text), "--");
+=======
+      copy_cstr(result.text, sizeof(result.text), "+1h");
+>>>>>>> 28e0244 (Updated)
       return false;
     }
     for (JsonObject visit : visits) {
@@ -643,7 +805,10 @@ bool idfm_fetch_next_departure(const char* api_key,
                   (unsigned)ESP.getFreeHeap());
     Serial.println(F("[IDFM] ========== END CALL (unknown MonitoredStopVisit type) =========="));
     set_error(result, "no visits", http_code);
+<<<<<<< HEAD
     copy_cstr(result.text, sizeof(result.text), "--");
+=======
+>>>>>>> 28e0244 (Updated)
     return false;
   }
 
@@ -661,7 +826,11 @@ bool idfm_fetch_next_departure(const char* api_key,
         (unsigned long)(millis() - t_start_ms));
     Serial.println(F("[IDFM] ========== END CALL (no matching visit after filters) =========="));
     set_error(result, "no match", http_code);
+<<<<<<< HEAD
     copy_cstr(result.text, sizeof(result.text), "--");
+=======
+    copy_cstr(result.text, sizeof(result.text), "+1h");
+>>>>>>> 28e0244 (Updated)
     return false;
   }
 
